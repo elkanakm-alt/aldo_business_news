@@ -23,30 +23,30 @@ use App\Http\Controllers\Admin\ContactAdminController;
 
 /*
 |--------------------------------------------------------------------------
-| ROUTE DE RÉPARATION ADMIN (Respecte ta structure is_admin)
+| OUTILS DE MAINTENANCE (À supprimer après usage)
 |--------------------------------------------------------------------------
 */
 
+// Configuration finale : Images + Cache
+Route::get('/final-setup', function () {
+    Artisan::call('storage:link'); // Crée le lien pour afficher les images
+    Artisan::call('config:clear');
+    Artisan::call('route:clear');
+    return "✅ Images liées et cache nettoyé ! <a href='/'>Retour à l'accueil</a>";
+});
+
+// Forcer la création de l'admin
 Route::get('/force-admin', function () {
-    // On récupère ton compte par l'email
-    $user = User::where('email', 'admin@aldo.com')->first();
-
-    if ($user) {
-        // On force les droits admin sur ton compte existant
-        $user->update(['is_admin' => true]);
-        return "✅ Droits Admin activés pour admin@aldo.com ! <a href='/admin/dashboard'>Accéder au Panel Admin</a>";
-    }
-
-    // Si l'utilisateur n'existe pas encore, on le crée proprement
-    User::create([
-        'name' => 'Aldo Admin',
-        'email' => 'admin@aldo.com',
-        'password' => Hash::make('12345678'),
-        'is_admin' => true,
-        'email_verified_at' => now(),
-    ]);
-
-    return "🚀 Compte 'Aldo Admin' créé avec succès ! <a href='/login'>Connecte-toi ici</a>";
+    $user = User::updateOrCreate(
+        ['email' => 'admin@aldo.com'],
+        [
+            'name' => 'Aldo Admin',
+            'password' => Hash::make('12345678'),
+            'is_admin' => true,
+            'email_verified_at' => now(),
+        ]
+    );
+    return "🚀 Compte Admin opérationnel ! <a href='/login'>Se connecter</a>";
 });
 
 /*
@@ -82,20 +82,22 @@ Route::post('/contact', [ContactController::class, 'submit'])->name('contact.sub
 
 /*
 |--------------------------------------------------------------------------
-| ROUTES MEMBRES (Dashboard Standard)
+| ROUTES MEMBRES (Connectés)
 |--------------------------------------------------------------------------
 */
 
 Route::middleware(['auth', 'verified'])->group(function () {
+    
     Route::get('/dashboard', function () {
-        // Rediriger automatiquement les admins vers le panel admin s'ils arrivent ici
+        // Redirection automatique si admin
         if (auth()->user()->is_admin) {
             return redirect()->route('admin.dashboard');
         }
         
         $userName = auth()->user()->name;
         $commentsCount = \App\Models\Comment::where('name', $userName)->count();
-        $recentComments = \App\Models\Comment::where('name', $userName)->with('post')->latest()->take(5)->get();
+        $recentComments = \App\Models\Comment::where('name', $userName)
+                            ->with('post')->latest()->take(5)->get();
         return view('dashboard', compact('commentsCount', 'recentComments'));
     })->name('dashboard');
 
@@ -110,32 +112,40 @@ Route::middleware(['auth', 'verified'])->group(function () {
 
 /*
 |--------------------------------------------------------------------------
-| ROUTES ADMINISTRATION (Le Panel Admin)
+| ROUTES ADMINISTRATION
 |--------------------------------------------------------------------------
 */
 
 Route::middleware(['auth', 'admin'])->prefix('admin')->name('admin.')->group(function () {
+    
     Route::get('/dashboard', [AdminDashboardController::class, 'index'])->name('dashboard');
     
-    Route::get('/contacts', [ContactAdminController::class, 'index'])->name('contacts.index');
-    Route::get('/contacts/{id}', [ContactAdminController::class, 'show'])->name('contacts.show');
-    Route::post('/contacts/{id}/reply', [ContactAdminController::class, 'reply'])->name('contacts.reply');
-    Route::delete('/contacts/{id}', [ContactAdminController::class, 'destroy'])->name('contacts.destroy');
+    // Gestion des Contacts
+    Route::controller(ContactAdminController::class)->group(function () {
+        Route::get('/contacts', 'index')->name('contacts.index');
+        Route::get('/contacts/{id}', 'show')->name('contacts.show');
+        Route::post('/contacts/{id}/reply', 'reply')->name('contacts.reply');
+        Route::delete('/contacts/{id}', 'destroy')->name('contacts.destroy');
+    });
 
+    // Profil Admin
     Route::get('/profile', [AdminProfileController::class, 'edit'])->name('profile.edit');
     Route::patch('/profile', [AdminProfileController::class, 'update'])->name('profile.update');
 
+    // Ressources CRUD
     Route::resource('posts', AdminPostController::class);
     Route::resource('categories', AdminCategoryController::class);
     Route::resource('users', AdminUserController::class);
     
+    // Gestion des Commentaires
     Route::resource('comments', AdminCommentController::class)->only(['index', 'destroy']);
     Route::patch('comments/{comment}/approve', [AdminCommentController::class, 'approve'])->name('comments.approve');
     Route::post('comments/{comment}/reply', [AdminCommentController::class, 'reply'])->name('comments.reply');
 
+    // Notifications
     Route::get('/notifications/read', function () {
         auth()->user()->unreadNotifications->markAsRead(); 
-        return back()->with('success', 'Toutes les notifications ont été marquées comme lues.');
+        return back()->with('success', 'Notifications lues.');
     })->name('notifications.read');
 });
 
