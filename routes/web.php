@@ -2,6 +2,8 @@
 
 use Illuminate\Support\Facades\Route;
 use Illuminate\Support\Facades\Artisan;
+use Illuminate\Support\Facades\Hash;
+use App\Models\User;
 
 // --- CONTROLEURS PUBLICS ---
 use App\Http\Controllers\PostController;
@@ -21,22 +23,30 @@ use App\Http\Controllers\Admin\ContactAdminController;
 
 /*
 |--------------------------------------------------------------------------
-| ROUTE D'INITIALISATION (Sans Middleware de Session)
+| CRÉATION DU COMPTE ADMINISTRATEUR (À SUPPRIMER APRÈS RÉUSSITE)
 |--------------------------------------------------------------------------
 */
 
-// On désactive les middlewares StartSession et ShareErrors pour éviter l'erreur "test.sessions doesn't exist"
-Route::get('/init-db', function () {
-    try {
-        Artisan::call('migrate:fresh --force');
-        return "🔥 VICTOIRE ! La base de données a été initialisée. <a href='/'>Cliquez ici pour voir le site</a>";
-    } catch (\Exception $e) {
-        return "Erreur lors de l'initialisation : " . $e->getMessage();
+Route::get('/setup-admin', function () {
+    // ⚠️ PERSONNALISE TES INFOS ICI
+    $email = 'elkanakm@gmail.com'; 
+    $password = 'AlDo@gmailBusinessNews01';
+
+    $user = User::where('email', $email)->first();
+
+    if (!$user) {
+        User::create([
+            'name' => 'Administrateur',
+            'email' => $email,
+            'password' => Hash::make($password),
+            'role' => 'admin', // Vérifie que ta colonne s'appelle bien 'role'
+            'email_verified_at' => now(),
+        ]);
+        return "Compte admin créé avec succès ! Tu peux maintenant te connecter sur <a href='/login'>la page de connexion</a>.";
     }
-})->withoutMiddleware([
-    \Illuminate\Session\Middleware\StartSession::class,
-    \Illuminate\View\Middleware\ShareErrorsFromSession::class,
-]);
+
+    return "L'utilisateur existe déjà ou la configuration est terminée.";
+});
 
 /*
 |--------------------------------------------------------------------------
@@ -68,7 +78,6 @@ Route::view('/about', 'pages.about')->name('about');
 // Contact (Formulaire public)
 Route::get('/contact', [ContactController::class, 'show'])->name('contact.show');
 Route::post('/contact', [ContactController::class, 'submit'])->name('contact.submit');
-
 
 /*
 |--------------------------------------------------------------------------
