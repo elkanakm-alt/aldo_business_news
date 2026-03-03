@@ -1,6 +1,6 @@
 FROM php:8.2-apache
 
-# 1. Installer les dépendances système et Node.js (pour Vite)
+# 1. Installer les dépendances système et Node.js (pour compiler le CSS/JS)
 RUN apt-get update && apt-get install -y \
     libpng-dev \
     libjpeg-dev \
@@ -17,7 +17,7 @@ RUN apt-get update && apt-get install -y \
 # 2. Activer le module de réécriture d'Apache
 RUN a2enmod rewrite
 
-# 3. Configurer Apache pour pointer vers le dossier /public
+# 3. Configurer Apache pour pointer vers /public
 ENV APACHE_DOCUMENT_ROOT /var/www/html/public
 RUN sed -ri -e 's!/var/www/html!${APACHE_DOCUMENT_ROOT}!g' /etc/apache2/sites-available/*.conf
 RUN sed -ri -e 's!/var/www/!${APACHE_DOCUMENT_ROOT}!g' /etc/apache2/apache2.conf /etc/apache2/conf-available/*.conf
@@ -29,10 +29,10 @@ COPY . /var/www/html
 RUN curl -sS https://getcomposer.org/installer | php -- --install-dir=/usr/local/bin --filename=composer
 RUN cd /var/www/html && composer install --no-dev --optimize-autoloader
 
-# 6. Installer les dépendances JS et compiler les assets avec Vite
+# 6. Installer les dépendances JS et compiler les assets (C'EST ÇA QUI REPARE LE DESIGN)
 RUN cd /var/www/html && npm install && npm run build
 
-# 7. Donner les bons droits (Lecture/Écriture pour Laravel)
+# 7. Donner les bons droits aux dossiers Laravel
 RUN chown -R www-data:www-data /var/www/html/storage /var/www/html/bootstrap/cache
 RUN chmod -R 775 /var/www/html/storage /var/www/html/bootstrap/cache
 
