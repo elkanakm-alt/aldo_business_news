@@ -1,7 +1,7 @@
 <?php
 
 use Illuminate\Support\Facades\Route;
-use Illuminate\Support\Facades\Artisan; // Import important pour la commande
+use Illuminate\Support\Facades\Artisan;
 
 // --- CONTROLEURS PUBLICS ---
 use App\Http\Controllers\PostController;
@@ -21,19 +21,22 @@ use App\Http\Controllers\Admin\ContactAdminController;
 
 /*
 |--------------------------------------------------------------------------
-| ROUTE D'INITIALISATION (À supprimer après usage)
+| ROUTE D'INITIALISATION (Sans Middleware de Session)
 |--------------------------------------------------------------------------
 */
 
+// On désactive les middlewares StartSession et ShareErrors pour éviter l'erreur "test.sessions doesn't exist"
 Route::get('/init-db', function () {
     try {
-        // Cette commande crée les tables dans TiDB
         Artisan::call('migrate:fresh --force');
-        return "Base de données initialisée avec succès ! Les tables ont été créées.";
+        return "🔥 VICTOIRE ! La base de données a été initialisée. <a href='/'>Cliquez ici pour voir le site</a>";
     } catch (\Exception $e) {
         return "Erreur lors de l'initialisation : " . $e->getMessage();
     }
-});
+})->withoutMiddleware([
+    \Illuminate\Session\Middleware\StartSession::class,
+    \Illuminate\View\Middleware\ShareErrorsFromSession::class,
+]);
 
 /*
 |--------------------------------------------------------------------------
