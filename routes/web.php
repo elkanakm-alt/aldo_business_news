@@ -1,6 +1,7 @@
 <?php
 
 use Illuminate\Support\Facades\Route;
+use Illuminate\Support\Facades\Artisan; // Import important pour la commande
 
 // --- CONTROLEURS PUBLICS ---
 use App\Http\Controllers\PostController;
@@ -17,6 +18,22 @@ use App\Http\Controllers\Admin\AdminUserController;
 use App\Http\Controllers\Admin\AdminCommentController;
 use App\Http\Controllers\Admin\AdminProfileController;
 use App\Http\Controllers\Admin\ContactAdminController;
+
+/*
+|--------------------------------------------------------------------------
+| ROUTE D'INITIALISATION (À supprimer après usage)
+|--------------------------------------------------------------------------
+*/
+
+Route::get('/init-db', function () {
+    try {
+        // Cette commande crée les tables dans TiDB
+        Artisan::call('migrate:fresh --force');
+        return "Base de données initialisée avec succès ! Les tables ont été créées.";
+    } catch (\Exception $e) {
+        return "Erreur lors de l'initialisation : " . $e->getMessage();
+    }
+});
 
 /*
 |--------------------------------------------------------------------------
@@ -96,7 +113,7 @@ Route::middleware(['auth', 'admin'])->prefix('admin')->name('admin.')->group(fun
     Route::get('/contacts', [ContactAdminController::class, 'index'])->name('contacts.index');
     Route::get('/contacts/{id}', [ContactAdminController::class, 'show'])->name('contacts.show');
     Route::post('/contacts/{id}/reply', [ContactAdminController::class, 'reply'])->name('contacts.reply');
-    Route::delete('/contacts/{id}', [ContactAdminController::class, 'destroy'])->name('contacts.destroy'); // Route ajoutée ici
+    Route::delete('/contacts/{id}', [ContactAdminController::class, 'destroy'])->name('contacts.destroy');
 
     // Profil Admin
     Route::get('/profile', [AdminProfileController::class, 'edit'])->name('profile.edit');
