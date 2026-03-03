@@ -6,6 +6,7 @@ use Illuminate\Support\ServiceProvider;
 use Illuminate\Pagination\Paginator;
 use Illuminate\Support\Facades\View;
 use Illuminate\Support\Facades\Auth;
+use Illuminate\Support\Facades\URL; // <-- AJOUTÉ ICI
 use App\Models\Contact;
 use App\Models\Comment;
 use Carbon\Carbon;
@@ -25,6 +26,11 @@ class AppServiceProvider extends ServiceProvider
      */
     public function boot(): void
     {
+        // 0. Forcer le HTTPS en production (Correction Design)
+        if (config('app.env') !== 'local') {
+            URL::forceScheme('https');
+        }
+
         // 1. Pagination Tailwind
         Paginator::useTailwind();
 
@@ -40,8 +46,7 @@ class AppServiceProvider extends ServiceProvider
                 // Compte des messages de contact non lus
                 $unreadContactsCount = Contact::where('is_read', false)->count();
 
-                // Compte des commentaires en attente (vérifie bien si ta colonne est 'status' ou 'is_approved')
-                // Ici je suppose que status = 'pending' ou is_approved = 0
+                // Compte des commentaires en attente
                 $unreadCommentsCount = Comment::where('status', 'pending')->count(); 
 
                 // On additionne les deux pour la pastille rouge sur la cloche
