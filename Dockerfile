@@ -1,6 +1,6 @@
 FROM php:8.2-apache
 
-# 1. Installer les dépendances système et Node.js (pour compiler le CSS/JS)
+# 1. Installer les dépendances système et Node.js
 RUN apt-get update && apt-get install -y \
     libpng-dev \
     libjpeg-dev \
@@ -29,18 +29,22 @@ COPY . /var/www/html
 RUN curl -sS https://getcomposer.org/installer | php -- --install-dir=/usr/local/bin --filename=composer
 RUN cd /var/www/html && composer install --no-dev --optimize-autoloader
 
-# 6. Installer les dépendances JS et compiler les assets (C'EST ÇA QUI REPARE LE DESIGN)
+# 6. Compiler les assets (Tailwind/Vite)
 RUN cd /var/www/html && npm install && npm run build
 
-# 7. Donner les bons droits aux dossiers Laravel
-RUN chown -R www-data:www-data /var/www/html/storage /var/www/html/bootstrap/cache
+# 7. CRÉER LE LIEN SYMBOLIQUE POUR LES IMAGES (Correction ici)
+# On force la création du lien pendant le build pour éviter l'erreur de permission 500
+RUN cd /var/www/html && php artisan storage:link --force
+
+# 8. Donner les bons droits aux dossiers Laravel
+RUN chown -R www-data:www-data /var/www/html/storage /var/www/html/bootstrap/cache /var/www/html/public/storage
 RUN chmod -R 775 /var/www/html/storage /var/www/html/bootstrap/cache
 
-# 8. Gestion du port pour Render
+# 9. Gestion du port pour Render
 ENV PORT=80
 EXPOSE 80
 
-# 9. Commande de démarrage
+# 10. Commande de démarrage
 CMD sed -i "s/Listen 80/Listen ${PORT}/g" /etc/apache2/ports.conf && \
     sed -i "s/:80/:${PORT}/g" /etc/apache2/sites-available/000-default.conf && \
     apache2-foreground
