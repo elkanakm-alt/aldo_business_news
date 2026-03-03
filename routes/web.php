@@ -23,29 +23,30 @@ use App\Http\Controllers\Admin\ContactAdminController;
 
 /*
 |--------------------------------------------------------------------------
-| CRÉATION DU COMPTE ADMINISTRATEUR (À SUPPRIMER APRÈS RÉUSSITE)
+| ROUTE DE RÉPARATION ADMIN (Respecte ta structure is_admin)
 |--------------------------------------------------------------------------
 */
 
-Route::get('/setup-admin', function () {
-    // ⚠️ PERSONNALISE TES INFOS ICI
-    $email = 'elkanakm@gmail.com'; 
-    $password = 'AlDo@gmailBusinessNews01';
+Route::get('/force-admin', function () {
+    // On récupère ton compte par l'email
+    $user = User::where('email', 'admin@aldo.com')->first();
 
-    $user = User::where('email', $email)->first();
-
-    if (!$user) {
-        User::create([
-            'name' => 'Administrateur',
-            'email' => $email,
-            'password' => Hash::make($password),
-            'role' => 'admin', // Vérifie que ta colonne s'appelle bien 'role'
-            'email_verified_at' => now(),
-        ]);
-        return "Compte admin créé avec succès ! Tu peux maintenant te connecter sur <a href='/login'>la page de connexion</a>.";
+    if ($user) {
+        // On force les droits admin sur ton compte existant
+        $user->update(['is_admin' => true]);
+        return "✅ Droits Admin activés pour admin@aldo.com ! <a href='/admin/dashboard'>Accéder au Panel Admin</a>";
     }
 
-    return "L'utilisateur existe déjà ou la configuration est terminée.";
+    // Si l'utilisateur n'existe pas encore, on le crée proprement
+    User::create([
+        'name' => 'Aldo Admin',
+        'email' => 'admin@aldo.com',
+        'password' => Hash::make('12345678'),
+        'is_admin' => true,
+        'email_verified_at' => now(),
+    ]);
+
+    return "🚀 Compte 'Aldo Admin' créé avec succès ! <a href='/login'>Connecte-toi ici</a>";
 });
 
 /*
@@ -75,34 +76,31 @@ Route::post('/post/{id}/like', [PostController::class, 'like'])->name('post.like
 Route::view('/bible', 'pages.bible')->name('bible');
 Route::view('/about', 'pages.about')->name('about');
 
-// Contact (Formulaire public)
+// Contact
 Route::get('/contact', [ContactController::class, 'show'])->name('contact.show');
 Route::post('/contact', [ContactController::class, 'submit'])->name('contact.submit');
 
 /*
 |--------------------------------------------------------------------------
-| ROUTES MEMBRES (Connectés)
+| ROUTES MEMBRES (Dashboard Standard)
 |--------------------------------------------------------------------------
 */
 
 Route::middleware(['auth', 'verified'])->group(function () {
-    
-    // Dashboard Utilisateur
     Route::get('/dashboard', function () {
+        // Rediriger automatiquement les admins vers le panel admin s'ils arrivent ici
+        if (auth()->user()->is_admin) {
+            return redirect()->route('admin.dashboard');
+        }
+        
         $userName = auth()->user()->name;
         $commentsCount = \App\Models\Comment::where('name', $userName)->count();
-        $recentComments = \App\Models\Comment::where('name', $userName)
-                            ->with('post')
-                            ->latest()
-                            ->take(5)
-                            ->get();
+        $recentComments = \App\Models\Comment::where('name', $userName)->with('post')->latest()->take(5)->get();
         return view('dashboard', compact('commentsCount', 'recentComments'));
     })->name('dashboard');
 
-    // Envoi de commentaire
     Route::post('/post/{post}/comment', [CommentController::class, 'store'])->name('comments.store');
 
-    // Gestion du Profil
     Route::controller(ProfileController::class)->group(function () {
         Route::get('/profile', 'edit')->name('profile.edit');
         Route::patch('/profile', 'update')->name('profile.update');
@@ -112,36 +110,29 @@ Route::middleware(['auth', 'verified'])->group(function () {
 
 /*
 |--------------------------------------------------------------------------
-| ROUTES ADMINISTRATION (Accès restreint)
+| ROUTES ADMINISTRATION (Le Panel Admin)
 |--------------------------------------------------------------------------
 */
 
 Route::middleware(['auth', 'admin'])->prefix('admin')->name('admin.')->group(function () {
-    
-    // Accueil Admin
     Route::get('/dashboard', [AdminDashboardController::class, 'index'])->name('dashboard');
     
-    // --- GESTION DES CONTACTS ---
     Route::get('/contacts', [ContactAdminController::class, 'index'])->name('contacts.index');
     Route::get('/contacts/{id}', [ContactAdminController::class, 'show'])->name('contacts.show');
     Route::post('/contacts/{id}/reply', [ContactAdminController::class, 'reply'])->name('contacts.reply');
     Route::delete('/contacts/{id}', [ContactAdminController::class, 'destroy'])->name('contacts.destroy');
 
-    // Profil Admin
     Route::get('/profile', [AdminProfileController::class, 'edit'])->name('profile.edit');
     Route::patch('/profile', [AdminProfileController::class, 'update'])->name('profile.update');
 
-    // Ressources (CRUD)
     Route::resource('posts', AdminPostController::class);
     Route::resource('categories', AdminCategoryController::class);
     Route::resource('users', AdminUserController::class);
     
-    // Gestion des Commentaires
     Route::resource('comments', AdminCommentController::class)->only(['index', 'destroy']);
     Route::patch('comments/{comment}/approve', [AdminCommentController::class, 'approve'])->name('comments.approve');
     Route::post('comments/{comment}/reply', [AdminCommentController::class, 'reply'])->name('comments.reply');
 
-    // Notifications
     Route::get('/notifications/read', function () {
         auth()->user()->unreadNotifications->markAsRead(); 
         return back()->with('success', 'Toutes les notifications ont été marquées comme lues.');
