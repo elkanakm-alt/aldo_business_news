@@ -1,0 +1,122 @@
+<?php
+
+use Illuminate\Support\Facades\Route;
+
+// --- CONTROLEURS PUBLICS ---
+use App\Http\Controllers\PostController;
+use App\Http\Controllers\ProfileController;
+use App\Http\Controllers\CommentController;
+use App\Http\Controllers\ContactController; 
+use App\Http\Controllers\Auth\AuthenticatedSessionController;
+
+// --- CONTROLEURS ADMIN ---
+use App\Http\Controllers\Admin\AdminDashboardController;
+use App\Http\Controllers\Admin\AdminPostController;
+use App\Http\Controllers\Admin\AdminCategoryController;
+use App\Http\Controllers\Admin\AdminUserController;
+use App\Http\Controllers\Admin\AdminCommentController;
+use App\Http\Controllers\Admin\AdminProfileController;
+use App\Http\Controllers\Admin\ContactAdminController;
+
+/*
+|--------------------------------------------------------------------------
+| ROUTES PUBLIQUES
+|--------------------------------------------------------------------------
+*/
+
+Route::get('/', [PostController::class, 'index'])->name('home');
+
+// Authentification
+Route::middleware('guest')->group(function () {
+    Route::get('login', [AuthenticatedSessionController::class, 'create'])->name('login');
+    Route::post('login', [AuthenticatedSessionController::class, 'store']);
+});
+Route::post('logout', [AuthenticatedSessionController::class, 'destroy'])->name('logout');
+
+// Articles & Catégories
+Route::get('/article/{slug}', [PostController::class, 'show'])->name('post.show');
+Route::get('/post/{slug}', [PostController::class, 'show'])->name('posts.show');
+Route::get('/categorie/{slug}', [PostController::class, 'category'])->name('category.show');
+
+// Système de Likes
+Route::post('/post/{id}/like', [PostController::class, 'like'])->name('post.like');
+
+// Pages Statiques
+Route::view('/bible', 'pages.bible')->name('bible');
+Route::view('/about', 'pages.about')->name('about');
+
+// Contact (Formulaire public)
+Route::get('/contact', [ContactController::class, 'show'])->name('contact.show');
+Route::post('/contact', [ContactController::class, 'submit'])->name('contact.submit');
+
+
+/*
+|--------------------------------------------------------------------------
+| ROUTES MEMBRES (Connectés)
+|--------------------------------------------------------------------------
+*/
+
+Route::middleware(['auth', 'verified'])->group(function () {
+    
+    // Dashboard Utilisateur
+    Route::get('/dashboard', function () {
+        $userName = auth()->user()->name;
+        $commentsCount = \App\Models\Comment::where('name', $userName)->count();
+        $recentComments = \App\Models\Comment::where('name', $userName)
+                            ->with('post')
+                            ->latest()
+                            ->take(5)
+                            ->get();
+        return view('dashboard', compact('commentsCount', 'recentComments'));
+    })->name('dashboard');
+
+    // Envoi de commentaire
+    Route::post('/post/{post}/comment', [CommentController::class, 'store'])->name('comments.store');
+
+    // Gestion du Profil
+    Route::controller(ProfileController::class)->group(function () {
+        Route::get('/profile', 'edit')->name('profile.edit');
+        Route::patch('/profile', 'update')->name('profile.update');
+        Route::delete('/profile', 'destroy')->name('profile.destroy');
+    });
+});
+
+/*
+|--------------------------------------------------------------------------
+| ROUTES ADMINISTRATION (Accès restreint)
+|--------------------------------------------------------------------------
+*/
+
+Route::middleware(['auth', 'admin'])->prefix('admin')->name('admin.')->group(function () {
+    
+    // Accueil Admin
+    Route::get('/dashboard', [AdminDashboardController::class, 'index'])->name('dashboard');
+    
+    // --- GESTION DES CONTACTS ---
+    Route::get('/contacts', [ContactAdminController::class, 'index'])->name('contacts.index');
+    Route::get('/contacts/{id}', [ContactAdminController::class, 'show'])->name('contacts.show');
+    Route::post('/contacts/{id}/reply', [ContactAdminController::class, 'reply'])->name('contacts.reply');
+    Route::delete('/contacts/{id}', [ContactAdminController::class, 'destroy'])->name('contacts.destroy'); // Route ajoutée ici
+
+    // Profil Admin
+    Route::get('/profile', [AdminProfileController::class, 'edit'])->name('profile.edit');
+    Route::patch('/profile', [AdminProfileController::class, 'update'])->name('profile.update');
+
+    // Ressources (CRUD)
+    Route::resource('posts', AdminPostController::class);
+    Route::resource('categories', AdminCategoryController::class);
+    Route::resource('users', AdminUserController::class);
+    
+    // Gestion des Commentaires
+    Route::resource('comments', AdminCommentController::class)->only(['index', 'destroy']);
+    Route::patch('comments/{comment}/approve', [AdminCommentController::class, 'approve'])->name('comments.approve');
+    Route::post('comments/{comment}/reply', [AdminCommentController::class, 'reply'])->name('comments.reply');
+
+    // Notifications
+    Route::get('/notifications/read', function () {
+        auth()->user()->unreadNotifications->markAsRead(); 
+        return back()->with('success', 'Toutes les notifications ont été marquées comme lues.');
+    })->name('notifications.read');
+});
+
+require __DIR__.'/auth.php';

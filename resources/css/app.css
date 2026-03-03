@@ -1,0 +1,110 @@
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+:root {
+    --bg-main: #f4f7fb;
+    --bg-card: #ffffff;
+    --text-main: #0f172a;
+    --text-muted: #64748b;
+    --primary: #06b6d4;
+    --accent: #10b981;
+    /* Variables CKEditor Light */
+    --ck-custom-bg: #f9fafb;
+    --ck-custom-border: #e5e7eb;
+}
+
+.dark {
+    --bg-main: #0b1120;
+    --bg-card: #111827;
+    --text-main: #e5e7eb;
+    --text-muted: #9ca3af;
+    --primary: #22d3ee;
+    --accent: #34d399;
+    /* Variables CKEditor Dark */
+    --ck-custom-bg: #1f2937;
+    --ck-custom-border: #374151;
+}
+
+body {
+    background-color: var(--bg-main);
+    color: var(--text-main);
+    transition: background-color 0.3s ease, color 0.3s ease;
+}
+
+/* --- Layout --- */
+.container-main {
+    max-width: 1200px;
+    margin-left: auto;
+    margin-right: auto;
+    padding-left: 40px;
+    padding-right: 20px;
+}
+
+.card {
+    background: var(--bg-card);
+    border-radius: 1.25rem;
+    overflow: hidden;
+    transition: all 0.35s ease;
+    box-shadow: 0 8px 25px rgba(0,0,0,0.06);
+    border: 1px solid rgba(0,0,0,0.04);
+}
+
+.card:hover {
+    transform: translateY(-6px);
+    box-shadow: 0 18px 40px rgba(0,0,0,0.12);
+}
+
+.premium-btn {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    padding: 0.75rem 1.7rem;
+    border-radius: 9999px;
+    font-weight: 600;
+    color: #ffffff !important;
+    background: linear-gradient(135deg, #10b981, #06b6d4);
+    transition: all 0.3s ease;
+    box-shadow: 0 8px 25px rgba(16, 185, 129, 0.25);
+    text-decoration: none;
+}
+
+/* --- Correctifs CKEditor pour le Mode Sombre --- */
+.ck.ck-editor__main>.ck-editor__editable {
+    background: var(--bg-card) !important;
+    color: var(--text-main) !important;
+    border-color: var(--ck-custom-border) !important;
+    border-radius: 0 0 1.25rem 1.25rem !important;
+    min-height: 400px;
+}
+
+.ck.ck-toolbar {
+    background: var(--ck-custom-bg) !important;
+    border-color: var(--ck-custom-border) !important;
+    border-radius: 1.25rem 1.25rem 0 0 !important;
+}
+
+.dark .ck.ck-toolbar .ck-icon, 
+.dark .ck.ck-toolbar .ck-button__label {
+    color: var(--text-main) !important;
+}
+
+.dark .ck.ck-button:hover, .dark .ck.ck-button.ck-on {
+    background: var(--ck-custom-border) !important;
+}
+
+/* --- Prose (Rendu article) --- */
+.article-box {
+    background: var(--bg-card);
+    padding: 50px;
+    border-radius: 1.5rem;
+    border-left: 6px solid var(--accent);
+    box-shadow: 0 15px 40px rgba(0,0,0,0.06);
+    line-height: 1.9;
+    font-size: 17px;
+}
+
+.prose {
+    color: var(--text-main);
+    max-width: 100%;
+}
