@@ -23,12 +23,15 @@ class Post extends Model
         'likes' => 'integer',
     ];
 
+    /**
+     * Boot : Automatisation du Slug et de l'Excerpt
+     */
     protected static function boot()
     {
         parent::boot();
 
         static::creating(function ($post) {
-            // SLUG UNIQUE
+            // Création automatique d'un SLUG unique
             if (empty($post->slug)) {
                 $slug = Str::slug($post->title);
                 $originalSlug = $slug;
@@ -39,36 +42,64 @@ class Post extends Model
                 $post->slug = $slug;
             }
 
-            // EXCERPT AUTO (Nettoyage des balises HTML pour un rendu propre)
+            // Création automatique de l'EXCERPT (Extrait)
             if (empty($post->excerpt)) {
                 $post->excerpt = Str::limit(strip_tags($post->content), 160);
             }
         });
     }
 
-    /* --- SCOPES --- */
+    /* --- SCOPES (Pour filtrer facilement) --- */
+    
     public function scopePublished($query)
     {
-        // On s'adapte à ta logique : soit status='published', soit is_published=1
         return $query->where('status', 'published');
     }
 
     /* --- RELATIONS --- */
-    public function category() { return $this->belongsTo(Category::class); }
-    public function user() { return $this->belongsTo(User::class); }
-    public function comments() { return $this->hasMany(Comment::class); }
 
-    /* --- ACCESSORS (Syntaxe moderne) --- */
-    
-    // Pour l'image : {{ $post->image_url }}
-    protected function imageUrl(): Attribute
-    {
-        return Attribute::get(fn () => $this->image 
-            ? asset('storage/' . $this->image) 
-            : asset('images/default.jpg'));
+    public function category() 
+    { 
+        return $this->belongsTo(Category::class); 
     }
 
-    // Temps de lecture : {{ $post->reading_time }} min
+    public function user() 
+    { 
+        return $this->belongsTo(User::class); 
+    }
+
+    public function comments() 
+    { 
+        return $this->hasMany(Comment::class); 
+    }
+
+    /* --- ACCESSORS (Logique de présentation) --- */
+
+    /**
+     * Gère l'URL de l'image (Local vs Externe/Cloudinary)
+     * Appel : {{ $post->image_url }}
+     */
+    protected function imageUrl(): Attribute
+    {
+        return Attribute::get(function () {
+            if (!$this->image) {
+                return asset('images/default.jpg');
+            }
+
+            // Si c'est une URL complète (Cloudinary ou Web), on la renvoie telle quelle
+            if (str_starts_with($this->image, 'http')) {
+                return $this->image;
+            }
+
+            // Sinon on pointe vers le stockage local de Laravel
+            return asset('storage/' . $this->image);
+        });
+    }
+
+    /**
+     * Calcule le temps de lecture
+     * Appel : {{ $post->reading_time }} min
+     */
     protected function readingTime(): Attribute
     {
         return Attribute::get(function () {
