@@ -3,6 +3,8 @@
 @section('title', 'Mon Espace - ALDO NEWS')
 
 @section('content')
+<script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+
 <div class="py-12 bg-slate-50 dark:bg-slate-950 min-h-screen transition-colors duration-300">
     <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
         
@@ -34,11 +36,10 @@
             </div>
         </div>
 
-        {{-- Cartes de statistiques & Raccourcis --}}
-        <div class="grid grid-cols-1 md:grid-cols-3 gap-8 mb-12">
-            
+        {{-- Cartes de statistiques --}}
+        <div class="grid grid-cols-1 md:grid-cols-3 gap-8 mb-8">
             {{-- Carte 1 : Commentaires --}}
-            <div class="bg-white dark:bg-slate-900 p-8 rounded-[2.5rem] shadow-sm border border-slate-100 dark:border-slate-800 group hover:border-cyan-500/50 transition-all duration-300">
+            <div class="bg-white dark:bg-slate-900 p-8 rounded-[2.5rem] shadow-sm border border-slate-100 dark:border-slate-800 group transition-all duration-300">
                 <div class="flex justify-between items-start mb-4">
                     <p class="text-slate-400 dark:text-slate-500 text-xs font-bold uppercase tracking-widest">Mon Activité</p>
                     <div class="p-2 bg-cyan-50 dark:bg-cyan-500/10 rounded-lg text-cyan-500">
@@ -51,51 +52,44 @@
                 </div>
             </div>
 
-            {{-- Carte 2 : Raccourci Actualités (Nouveau) --}}
-            <a href="{{ route('home') }}" class="bg-white dark:bg-slate-900 p-8 rounded-[2.5rem] shadow-sm border border-slate-100 dark:border-slate-800 group hover:border-blue-500/50 transition-all duration-300 relative overflow-hidden">
-                <div class="flex justify-between items-start mb-4">
-                    <p class="text-slate-400 dark:text-slate-500 text-xs font-bold uppercase tracking-widest">Navigation</p>
-                    <div class="p-2 bg-blue-50 dark:bg-blue-500/10 rounded-lg text-blue-500 group-hover:scale-110 transition-transform">
-                        <i class="fas fa-newspaper"></i>
-                    </div>
-                </div>
+            {{-- Carte 2 : Rang --}}
+            <div class="bg-gradient-to-br from-slate-900 to-slate-800 dark:from-blue-600 dark:to-cyan-500 p-8 rounded-[2.5rem] shadow-xl text-white relative overflow-hidden group col-md-span-1 md:col-span-2">
                 <div class="relative z-10">
-                    <span class="text-2xl font-black text-slate-900 dark:text-white block">Lire les Actus</span>
-                    <span class="text-blue-500 text-xs font-bold uppercase flex items-center mt-2">
-                        Retourner au flux <i class="fas fa-arrow-right ml-2 group-hover:translate-x-1 transition-transform"></i>
-                    </span>
-                </div>
-                <i class="fas fa-globe absolute -right-4 -bottom-4 text-slate-50 dark:text-slate-800/50 text-7xl rotate-12"></i>
-            </a>
-
-            {{-- Carte 3 : Statut Compte --}}
-            <div class="bg-gradient-to-br from-slate-900 to-slate-800 dark:from-blue-600 dark:to-cyan-500 p-8 rounded-[2.5rem] shadow-xl text-white relative overflow-hidden group">
-                <div class="relative z-10">
-                    <p class="text-white/60 text-xs font-bold uppercase tracking-widest mb-4">Rang Communauté</p>
+                    <p class="text-white/60 text-xs font-bold uppercase tracking-widest mb-4">Statut de la communauté</p>
                     <div class="flex items-center gap-3">
                         <span class="text-3xl font-black">{{ ucfirst(Auth::user()->role ?? 'Membre') }}</span>
                         <span class="px-3 py-1 bg-white/20 backdrop-blur-md rounded-full text-[10px] font-bold uppercase border border-white/20">Compte Actif</span>
                     </div>
                 </div>
-                {{-- Décoration de fond --}}
                 <div class="absolute -right-4 -bottom-4 text-white/10 text-8xl rotate-12 transition-transform group-hover:scale-110">
                     <i class="fas fa-award"></i>
                 </div>
             </div>
         </div>
 
+        {{-- SECTION GRAPHIQUE --}}
+        <div class="bg-white dark:bg-slate-900 p-8 rounded-[3rem] shadow-sm border border-slate-100 dark:border-slate-800 mb-12">
+            <h3 class="text-xl font-black text-slate-900 dark:text-white mb-8 flex items-center gap-3">
+                <span class="w-2 h-8 bg-blue-500 rounded-full"></span>
+                Analyse de votre engagement
+            </h3>
+            <div class="h-[300px] w-full">
+                <canvas id="activityChart"></canvas>
+            </div>
+        </div>
+
         {{-- Section Historique --}}
-        <div class="bg-white dark:bg-slate-900 rounded-[3rem] p-8 md:p-10 shadow-sm border border-slate-100 dark:border-slate-800 transition-colors">
+        <div class="bg-white dark:bg-slate-900 rounded-[3rem] p-8 md:p-10 shadow-sm border border-slate-100 dark:border-slate-800">
             <div class="flex items-center justify-between mb-8">
                 <h3 class="text-xl font-black text-slate-900 dark:text-white flex items-center gap-3">
                     <span class="w-2 h-8 bg-cyan-500 rounded-full"></span>
-                    Mes derniers commentaires
+                    Dernières interactions
                 </h3>
             </div>
             
             <div class="space-y-4">
                 @forelse($recentComments as $comment)
-                    <div class="group flex items-start justify-between p-6 bg-slate-50 dark:bg-slate-800/40 rounded-3xl hover:bg-white dark:hover:bg-slate-800 transition-all border border-transparent hover:border-slate-200 dark:hover:border-slate-700 hover:shadow-xl dark:hover:shadow-none">
+                    <div class="group flex items-start justify-between p-6 bg-slate-50 dark:bg-slate-800/40 rounded-3xl hover:bg-white dark:hover:bg-slate-800 transition-all border border-transparent hover:border-slate-200 dark:hover:border-slate-700">
                         <div class="space-y-3 flex-1">
                             <p class="text-slate-700 dark:text-slate-300 font-medium leading-relaxed italic pr-4">
                                 "{{ Str::limit($comment->content, 150) }}"
@@ -112,16 +106,61 @@
                     </div>
                 @empty
                     <div class="text-center py-20 bg-slate-50 dark:bg-slate-800/20 rounded-[2rem] border-2 border-dashed border-slate-200 dark:border-slate-800">
-                        <div class="w-16 h-16 bg-white dark:bg-slate-800 rounded-full flex items-center justify-center mx-auto mb-4 shadow-sm text-2xl">
-                            🖋️
-                        </div>
-                        <p class="text-slate-500 dark:text-slate-400 font-medium">Vous n'avez pas encore partagé d'avis.</p>
-                        <a href="{{ route('home') }}" class="text-cyan-500 font-bold text-sm mt-4 inline-block hover:underline">Voir les actualités</a>
+                        <p class="text-slate-500 dark:text-slate-400 font-medium">Aucun commentaire pour le moment.</p>
                     </div>
                 @endforelse
             </div>
         </div>
-
     </div>
 </div>
+
+{{-- SCRIPT DU GRAPHIQUE --}}
+<script>
+    document.addEventListener('DOMContentLoaded', function() {
+        const ctx = document.getElementById('activityChart').getContext('2d');
+        
+        // On crée un dégradé pour le fond du graphique
+        const gradient = ctx.createLinearGradient(0, 0, 0, 400);
+        gradient.addColorStop(0, 'rgba(6, 182, 212, 0.4)');
+        gradient.addColorStop(1, 'rgba(6, 182, 212, 0)');
+
+        new Chart(ctx, {
+            type: 'line',
+            data: {
+                labels: ['Lun', 'Mar', 'Mer', 'Jeu', 'Ven', 'Sam', 'Dim'],
+                datasets: [{
+                    label: 'Commentaires',
+                    data: [2, 5, 3, 8, 4, 10, 6], // Ces données seront à rendre dynamiques plus tard
+                    borderColor: '#06b6d4',
+                    backgroundColor: gradient,
+                    borderWidth: 4,
+                    fill: true,
+                    tension: 0.4,
+                    pointRadius: 6,
+                    pointBackgroundColor: '#fff',
+                    pointBorderColor: '#06b6d4',
+                    pointBorderWidth: 3
+                }]
+            },
+            options: {
+                responsive: true,
+                maintainAspectRatio: false,
+                plugins: {
+                    legend: { display: false }
+                },
+                scales: {
+                    y: { 
+                        beginAtZero: true, 
+                        grid: { color: 'rgba(148, 163, 184, 0.1)' },
+                        ticks: { color: '#94a3b8', font: { weight: 'bold' } }
+                    },
+                    x: { 
+                        grid: { display: false },
+                        ticks: { color: '#94a3b8', font: { weight: 'bold' } }
+                    }
+                }
+            }
+        });
+    });
+</script>
 @endsection
