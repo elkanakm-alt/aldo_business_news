@@ -21,14 +21,19 @@
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
     <link href='https://unpkg.com/boxicons@2.1.4/css/boxicons.min.css' rel='stylesheet'>
 </head>
-<body class="flex min-h-screen bg-gray-50 dark:bg-gray-950 font-sans text-gray-800 dark:text-gray-200">
+<body class="flex min-h-screen bg-gray-50 dark:bg-gray-950 font-sans text-gray-800 dark:text-gray-200 overflow-x-hidden">
 
-    {{-- SIDEBAR --}}
-    <aside id="sidebar" class="w-64 bg-white dark:bg-gray-900 border-r border-gray-200 dark:border-gray-800 flex flex-col transition-all duration-300 shrink-0 z-30">
-        <div class="sticky top-0 h-screen flex flex-col">
+    {{-- OVERLAY MOBILE : Pour fermer la sidebar en cliquant à côté --}}
+    <div id="sidebar-overlay" class="fixed inset-0 bg-gray-900/50 z-20 hidden md:hidden backdrop-blur-sm"></div>
+
+    {{-- SIDEBAR : Ajout de -translate-x-full par défaut sur mobile --}}
+    <aside id="sidebar" class="fixed inset-y-0 left-0 z-30 w-64 bg-white dark:bg-gray-900 border-r border-gray-200 dark:border-gray-800 transition-all duration-300 transform -translate-x-full md:relative md:translate-x-0 flex flex-col shrink-0">
+        <div class="h-full flex flex-col">
             {{-- LOGO --}}
             <div class="h-16 flex items-center px-6 font-bold text-2xl text-blue-600 dark:text-blue-400 gap-2 shrink-0">
-                <span class="text-3xl">🚀</span><span class="text-blue-600">AL</span><span class="text-red-600">DO</span><span class="bg-gradient-to-r from-cyan-500 to-blue-600 bg-clip-text text-transparent">ADMIN</span>
+                <span class="text-3xl">🚀</span><span id="logo-text" class="flex">
+                    <span class="text-blue-600">AL</span><span class="text-red-600">DO</span><span class="bg-gradient-to-r from-cyan-500 to-blue-600 bg-clip-text text-transparent">ADMIN</span>
+                </span>
             </div>
 
             <nav class="flex-1 px-4 py-4 space-y-1 overflow-y-auto">
@@ -50,7 +55,7 @@
                         <span class="font-bold sidebar-text text-sm">Commentaires</span>
                     </div>
                     @if(isset($unreadCommentsCount) && $unreadCommentsCount > 0)
-                        <span class="sidebar-text inline-flex items-center justify-center px-2 py-1 text-[10px] font-black text-white bg-amber-500 rounded-lg group-hover:bg-white group-hover:text-amber-500 transition-colors">
+                        <span class="sidebar-text inline-flex items-center justify-center px-2 py-1 text-[10px] font-black text-white bg-amber-500 rounded-lg">
                             {{ $unreadCommentsCount }}
                         </span>
                     @endif
@@ -62,7 +67,7 @@
                         <span class="font-bold sidebar-text text-sm">Messages</span>
                     </div>
                     @if(isset($unreadContactsCount) && $unreadContactsCount > 0)
-                        <span class="sidebar-text inline-flex items-center justify-center px-2 py-1 text-[10px] font-black text-white bg-rose-500 rounded-lg group-hover:bg-white group-hover:text-rose-500 transition-colors">
+                        <span class="sidebar-text inline-flex items-center justify-center px-2 py-1 text-[10px] font-black text-white bg-rose-500 rounded-lg">
                             {{ $unreadContactsCount }}
                         </span>
                     @endif
@@ -98,10 +103,10 @@
     </aside>
 
     {{-- MAIN CONTENT --}}
-    <div class="flex-1 flex flex-col min-w-0">
+    <div class="flex-1 flex flex-col min-w-0 h-screen overflow-y-auto">
         
         {{-- HEADER --}}
-        <header class="sticky top-0 z-40 h-16 flex items-center justify-between px-6 bg-white/80 dark:bg-gray-900/80 backdrop-blur-md border-b border-gray-200 dark:border-gray-800">
+        <header class="sticky top-0 z-20 h-16 flex items-center justify-between px-6 bg-white/80 dark:bg-gray-900/80 backdrop-blur-md border-b border-gray-200 dark:border-gray-800 shrink-0">
             <div class="flex items-center gap-4">
                 <button id="toggleSidebar" class="p-2 rounded-lg text-gray-500 hover:bg-gray-100 dark:hover:bg-gray-800 transition-colors">
                     <i class='bx bx-menu text-2xl'></i>
@@ -110,13 +115,10 @@
             </div>
 
             <div class="flex items-center gap-5">
-                
-                {{-- CLOCHE DYNAMIQUE CORRIGÉE --}}
+                {{-- CLOCHE DYNAMIQUE --}}
                 <div class="relative" x-data="{ open: false }">
                     <button @click="open = !open" class="relative p-2 text-gray-400 hover:text-blue-500 transition-colors focus:outline-none">
                         <i class='bx bxs-bell text-2xl'></i>
-                        
-                        {{-- Utilisation de totalNotifications calculé dans AppServiceProvider --}}
                         @if(isset($totalNotifications) && $totalNotifications > 0)
                             <span class="absolute top-2 right-2 flex h-4 w-4">
                                 <span class="animate-ping absolute inline-flex h-full w-full rounded-full bg-rose-400 opacity-75"></span>
@@ -127,48 +129,22 @@
                         @endif
                     </button>
 
-                    <div x-show="open" 
-                         @click.away="open = false" 
-                         x-transition:enter="transition ease-out duration-200" 
-                         x-transition:enter-start="opacity-0 scale-95" 
-                         x-transition:enter-end="opacity-100 scale-100" 
-                         class="absolute right-0 mt-3 w-80 bg-white dark:bg-gray-800 rounded-2xl shadow-2xl border border-gray-100 dark:border-gray-700 z-50 overflow-hidden" 
-                         style="display: none;">
-                        
+                    <div x-show="open" @click.away="open = false" style="display: none;" class="absolute right-0 mt-3 w-80 bg-white dark:bg-gray-800 rounded-2xl shadow-2xl border border-gray-100 dark:border-gray-700 z-50 overflow-hidden">
                         <div class="p-4 bg-gray-50 dark:bg-gray-700/50 flex justify-between items-center border-b border-gray-100 dark:border-gray-700">
                             <span class="font-black text-xs uppercase tracking-tighter">Alertes & Activités</span>
                         </div>
-
                         <div class="max-h-72 overflow-y-auto">
-                            {{-- Section Messages non lus --}}
                             @if(isset($unreadContactsCount) && $unreadContactsCount > 0)
                                 <a href="{{ route('admin.contacts.index') }}" class="block p-4 border-b border-gray-50 dark:border-gray-700/50 hover:bg-blue-50 dark:hover:bg-blue-900/10">
                                     <p class="text-xs font-bold text-blue-600 uppercase">📧 {{ $unreadContactsCount }} Nouveau(x) Message(s)</p>
-                                    <span class="text-[10px] text-gray-400">Voir la boîte de réception</span>
                                 </a>
                             @endif
-
-                            {{-- Section Commentaires en attente --}}
-                            @if(isset($unreadCommentsCount) && $unreadCommentsCount > 0)
-                                <a href="{{ route('admin.comments.index') }}" class="block p-4 border-b border-gray-50 dark:border-gray-700/50 hover:bg-amber-50 dark:hover:bg-amber-900/10">
-                                    <p class="text-xs font-bold text-amber-600 uppercase">💬 {{ $unreadCommentsCount }} Commentaire(s) en attente</p>
-                                    <span class="text-[10px] text-gray-400">Modérer les commentaires</span>
-                                </a>
-                            @endif
-
-                            {{-- Notifications Système --}}
                             @forelse($latestNotifications ?? [] as $notification)
-                                <a href="#" class="block p-4 border-b border-gray-50 dark:border-gray-700/50 hover:bg-gray-50 dark:hover:bg-gray-700/30 transition-colors">
-                                    <p class="text-xs font-bold leading-tight uppercase">
-                                        {{ $notification->data['user_name'] ?? 'Système' }} 
-                                        <span class="font-normal text-gray-500 lowercase">{{ $notification->data['message'] ?? 'notification' }}</span>
-                                    </p>
-                                    <span class="text-[9px] text-gray-400 mt-1 block italic">{{ $notification->created_at->diffForHumans() }}</span>
+                                <a href="#" class="block p-4 border-b border-gray-50 dark:border-gray-700/50 hover:bg-gray-50 transition-colors">
+                                    <p class="text-xs font-bold uppercase">{{ $notification->data['user_name'] ?? 'Système' }}</p>
                                 </a>
                             @empty
-                                @if($totalNotifications == 0)
-                                    <div class="p-8 text-center text-gray-400 italic text-xs">Aucune nouvelle alerte ✨</div>
-                                @endif
+                                <div class="p-8 text-center text-gray-400 italic text-xs">Aucune alerte ✨</div>
                             @endforelse
                         </div>
                     </div>
@@ -177,10 +153,10 @@
                 {{-- USER PROFILE --}}
                 <a href="{{ route('admin.profile.edit') }}" class="flex items-center gap-3 pl-4 border-l border-gray-100 dark:border-gray-800 group transition-all">
                     <div class="text-right hidden sm:block">
-                        <p class="text-xs font-black text-gray-800 dark:text-white leading-none group-hover:text-blue-600 transition-colors">{{ auth()->user()->name }}</p>
-                        <p class="text-[10px] text-blue-500 font-bold mt-1 uppercase tracking-tighter">Administrateur</p>
+                        <p class="text-xs font-black text-gray-800 dark:text-white leading-none">{{ auth()->user()->name }}</p>
+                        <p class="text-[10px] text-blue-500 font-bold mt-1 uppercase tracking-tighter">Admin</p>
                     </div>
-                    <div class="h-10 w-10 rounded-xl bg-blue-600 text-white flex items-center justify-center font-black shadow-lg shadow-blue-500/30 group-hover:scale-105 transition-transform overflow-hidden border-2 border-transparent group-hover:border-blue-500/20">
+                    <div class="h-10 w-10 rounded-xl bg-blue-600 text-white flex items-center justify-center font-black shadow-lg overflow-hidden border-2 border-transparent group-hover:border-blue-500/20">
                         @if(auth()->user()->photo)
                             <img src="{{ asset('storage/' . auth()->user()->photo) }}" class="w-full h-full object-cover">
                         @else
@@ -194,49 +170,43 @@
         {{-- PAGE CONTENT --}}
         <main class="flex-1 p-4 lg:p-10">
             <div class="max-w-7xl mx-auto">
-                {{-- Alertes de Succès --}}
                 @if(session('success'))
                     <div x-data="{ show: true }" x-show="show" x-init="setTimeout(() => show = false, 5000)" class="mb-8 p-4 bg-emerald-500/10 border-l-4 border-emerald-500 text-emerald-600 text-sm font-bold rounded-r-xl shadow-sm flex justify-between items-center">
                         <span>✨ {{ session('success') }}</span>
                         <button @click="show = false" class="text-emerald-400 hover:text-emerald-600">×</button>
                     </div>
                 @endif
-
-                {{-- Alertes d'Erreur --}}
-                @if($errors->any())
-                    <div class="mb-8 p-4 bg-rose-500/10 border-l-4 border-rose-500 text-rose-600 text-sm font-bold rounded-r-xl shadow-sm">
-                        <ul class="list-disc list-inside">
-                            @foreach ($errors->all() as $error)
-                                <li>{{ $error }}</li>
-                            @endforeach
-                        </ul>
-                    </div>
-                @endif
-
                 @yield('content')
             </div>
         </main>
     </div>
 
-    @stack('modals')
-
     <script>
-        // Sidebar Toggle Logic
         const toggleBtn = document.getElementById('toggleSidebar');
         const sidebar = document.getElementById('sidebar');
+        const sidebarOverlay = document.getElementById('sidebar-overlay');
         const sidebarTexts = document.querySelectorAll('.sidebar-text');
+        const logoText = document.getElementById('logo-text');
         
-        toggleBtn.addEventListener('click', () => {
+        // Fonction pour basculer la sidebar
+        function toggleSidebar() {
             if (window.innerWidth >= 768) {
+                // Version Desktop : Réduction / Agrandissement
                 sidebar.classList.toggle('w-64');
                 sidebar.classList.toggle('w-20');
                 sidebarTexts.forEach(text => text.classList.toggle('hidden'));
+                logoText.classList.toggle('hidden');
             } else {
+                // Version Mobile : Entrée / Sortie (Slide)
                 sidebar.classList.toggle('-translate-x-full');
+                sidebarOverlay.classList.toggle('hidden');
             }
-        });
+        }
 
-        // Theme Toggle Logic
+        toggleBtn.addEventListener('click', toggleSidebar);
+        sidebarOverlay.addEventListener('click', toggleSidebar);
+
+        // Theme Toggle
         const themeToggleBtn = document.getElementById('theme-toggle');
         const darkIcon = document.getElementById('theme-toggle-dark-icon');
         const lightIcon = document.getElementById('theme-toggle-light-icon');
@@ -258,7 +228,5 @@
             updateIcons();
         });
     </script>
-
-    @stack('scripts') 
 </body>
 </html>
