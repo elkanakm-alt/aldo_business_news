@@ -8,81 +8,89 @@
     $commentsList = isset($comments) ? $comments : $post->comments()->whereNull('parent_id')->where('status', 'approved')->latest()->get();
 @endphp
 
-{{-- Container global très large --}}
-<div class="max-w-[1550px] mx-auto px-4 sm:px-6 lg:px-10 py-6 md:py-12">
+<div class="max-w-[1550px] mx-auto px-0 sm:px-6 lg:px-10 bg-white dark:bg-slate-950 min-h-screen">
     
-    <div class="flex flex-col lg:flex-row gap-8 md:gap-12">
-        
-        {{-- COLONNE LECTURE (Prend le maximum d'espace) --}}
-        <article class="flex-1 w-full">
+    {{-- 1. CADRE PHOTO : Utilise object-contain pour NE JAMAIS couper --}}
+    <div class="w-full mb-8 md:mb-14 md:pt-6">
+        <div class="w-full h-72 md:h-[70vh] bg-slate-100 dark:bg-slate-900 overflow-hidden md:rounded-[3.5rem] shadow-2xl flex items-center justify-center">
+            <img src="{{ $post->image ? asset('storage/'.$post->image) : asset('images/default.jpg') }}" 
+                 class="w-full h-full object-contain" {{-- Ici : Contain garantit l'image entière --}}
+                 alt="{{ $post->title }}">
+        </div>
+    </div>
+
+    <div class="px-4 sm:px-0">
+        <div class="flex flex-col lg:flex-row gap-8 md:gap-16">
             
-            {{-- TITRE --}}
-            <h1 class="text-3xl md:text-6xl font-black leading-tight mb-8 text-slate-900 dark:text-white italic tracking-tighter">
-                {{ $post->title }}
-            </h1>
-
-            {{-- DIV PRINCIPALE (Adaptative Light/Dark) --}}
-            <div class="bg-white dark:bg-slate-900 shadow-sm border border-slate-100 dark:border-slate-800 rounded-[2rem] md:rounded-[3rem] overflow-hidden">
+            {{-- 2. ZONE DE LECTURE : Largeur maximale --}}
+            <article class="flex-1 w-full">
                 
-                {{-- PHOTO PRINCIPALE (Format d'origine) --}}
-                <div class="w-full bg-slate-50 dark:bg-slate-800">
-                    <img src="{{ $post->image ? asset('storage/'.$post->image) : asset('images/default.jpg') }}" 
-                         class="w-full h-auto max-h-[75vh] object-contain mx-auto" 
-                         alt="{{ $post->title }}">
-                </div>
+                <h1 class="text-3xl md:text-7xl font-black leading-tight mb-8 text-slate-900 dark:text-white italic tracking-tighter">
+                    {{ $post->title }}
+                </h1>
 
-                {{-- ZONE DE TEXTE ÉLARGIE AU MAXIMUM --}}
-                <div class="p-5 md:p-10">
-                    
-                    {{-- Barre d'infos --}}
-                    <div class="flex items-center justify-between mb-8 pb-6 border-b border-slate-50 dark:border-slate-800">
-                        <div class="flex items-center gap-4">
-                            <img src="{{ $post->user && $post->user->photo ? asset('storage/'.$post->user->photo) : 'https://ui-avatars.com/api/?background=10b981&color=fff&name='.urlencode($post->user->name ?? 'A') }}" 
-                                 class="w-12 h-12 rounded-full border-2 border-emerald-500 object-cover">
-                            <div class="leading-none">
-                                <p class="font-black text-slate-900 dark:text-white text-[13px] uppercase mb-1">{{ $post->user->name ?? 'Auteur' }}</p>
-                                <p class="text-[10px] text-slate-400 uppercase font-bold tracking-widest">{{ $post->created_at->translatedFormat('d F Y') }}</p>
-                            </div>
+                {{-- BARRE DE STATS : Vues, Likes, Lecture --}}
+                <div class="flex flex-wrap items-center justify-between py-8 border-y border-slate-100 dark:border-slate-800 mb-12 gap-6">
+                    <div class="flex items-center gap-4">
+                        <img src="{{ $post->user && $post->user->photo ? asset('storage/'.$post->user->photo) : 'https://ui-avatars.com/api/?background=10b981&color=fff&name='.urlencode($post->user->name ?? 'A') }}" 
+                             class="w-14 h-14 rounded-full border-2 border-emerald-500 shadow-sm object-cover">
+                        <div>
+                            <p class="font-black text-slate-900 dark:text-white text-[14px] uppercase tracking-tighter">{{ $post->user->name ?? 'Auteur' }}</p>
+                            <p class="text-[10px] text-slate-400 uppercase font-bold tracking-widest">{{ $post->created_at->translatedFormat('d F Y') }}</p>
                         </div>
-                        <button onclick="likePost({{ $post->id }})" class="bg-emerald-50 dark:bg-emerald-900/20 text-emerald-600 px-5 py-2 rounded-xl active:scale-125 transition font-black text-[12px]">
+                    </div>
+                    
+                    <div class="flex items-center gap-6 text-[11px] font-black uppercase tracking-widest text-slate-500">
+                        <span class="flex items-center gap-2">⏱ {{ $readingTime }} MIN</span>
+                        <span class="flex items-center gap-2">👁 {{ $post->views ?? 0 }} VUES</span>
+                        <button onclick="likePost({{ $post->id }})" class="flex items-center gap-2 bg-emerald-50 dark:bg-emerald-900/20 text-emerald-600 px-5 py-2.5 rounded-xl active:scale-125 transition">
                             ❤️ <span id="like-count-{{ $post->id }}">{{ $post->likes ?? 0 }}</span>
                         </button>
                     </div>
-
-                    {{-- CONTENU : Ici on force la pleine largeur avec max-w-none --}}
-                    <div class="article-content prose dark:prose-invert max-w-none w-full text-lg md:text-[22px] leading-[1.8] text-slate-700 dark:text-slate-300 font-sans">
-                        {!! $post->content !!}
-                    </div>
                 </div>
-            </div>
 
-            {{-- SECTION DISCUSSION --}}
-            <section class="bg-white dark:bg-slate-900 shadow-sm border border-slate-100 dark:border-slate-800 rounded-[2rem] md:rounded-[3rem] p-6 md:p-10 mt-10">
-                <h3 class="text-2xl font-black uppercase italic mb-8 dark:text-white tracking-tighter">Discussion</h3>
-                {{-- ... Tes commentaires ici --}}
-            </section>
-        </article>
+                {{-- CONTENU : Sans div restrictive, prend toute la largeur --}}
+                <div class="article-content prose dark:prose-invert max-w-none w-full text-lg md:text-[25px] leading-[1.85] text-slate-700 dark:text-slate-300 font-sans">
+                    {!! $post->content !!}
+                </div>
 
-        {{-- SIDEBAR (Plus fine pour laisser de la place au texte) --}}
-        <aside class="w-full lg:w-[320px] shrink-0">
-            <div class="lg:sticky lg:top-24">
-                @include('profile.partials.sidebar')
-            </div>
-        </aside>
+                {{-- COMMENTAIRES --}}
+                <section class="mt-20 pt-10 border-t border-slate-100 dark:border-slate-800 pb-20">
+                    <h3 class="text-3xl font-black uppercase italic mb-10 dark:text-white tracking-tighter">Discussion</h3>
+                    {{-- Ton formulaire de commentaire ici --}}
+                </section>
+            </article>
+
+            {{-- 3. SIDEBAR --}}
+            <aside class="w-full lg:w-[350px] shrink-0">
+                <div class="lg:sticky lg:top-24">
+                    @include('profile.partials.sidebar')
+                </div>
+            </aside>
+        </div>
     </div>
 </div>
 
+<script>
+function likePost(postId) {
+    fetch('/post/' + postId + '/like', {
+        method: 'POST',
+        headers: { 'X-CSRF-TOKEN': '{{ csrf_token() }}', 'Accept': 'application/json', 'X-Requested-With': 'XMLHttpRequest' }
+    })
+    .then(res => res.json())
+    .then(data => { if(data.likes !== undefined) document.getElementById('like-count-' + postId).innerText = data.likes; })
+}
+</script>
+
 <style>
-    /* On s'assure que le contenu HTML généré (images, tableaux) prend toute la largeur */
-    .article-content > * {
-        width: 100% !important;
-        max-width: 100% !important;
-    }
+    /* Images internes : elles aussi ne sont jamais coupées */
     .article-content img {
+        width: 100%;
         height: auto;
-        border-radius: 1.5rem;
-        margin: 2.5rem 0;
+        object-fit: contain;
+        border-radius: 2rem;
+        margin: 3.5rem 0;
     }
-    .article-content p { margin-bottom: 1.5rem; }
+    .article-content p { width: 100%; margin-bottom: 2rem; }
 </style>
 @endsection

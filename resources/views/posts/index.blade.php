@@ -6,19 +6,27 @@
     \Carbon\Carbon::setLocale('fr');
 @endphp
 
-{{-- Container élargi pour occuper l'espace normalement --}}
 <div class="max-w-[1450px] mx-auto px-4 md:px-8 py-6 md:py-10">
     
-    {{-- SECTION VEDETTE : Plus large et immersive --}}
+    {{-- SECTION VEDETTE --}}
     @isset($featuredPost)
+        @php 
+            $fWordCount = str_word_count(strip_tags($featuredPost->content));
+            $fReadingTime = ceil($fWordCount / 200); 
+        @endphp
         <section class="relative rounded-[2.5rem] overflow-hidden group shadow-2xl mb-12 mx-0">
             <img src="{{ $featuredPost->image ? asset('storage/'.$featuredPost->image) : asset('images/default.jpg') }}" 
                  class="w-full h-[40vh] md:h-[60vh] object-cover transition duration-1000 group-hover:scale-105">
             <div class="absolute inset-0 bg-gradient-to-t from-black/90 via-black/30 to-transparent"></div>
             <div class="absolute bottom-0 left-0 p-8 md:p-12 text-white max-w-3xl">
-                <div class="inline-block p-[1px] rounded-full bg-gradient-to-r from-orange-500 to-emerald-500 mb-4 shadow-lg">
-                    <span class="block px-4 py-1 rounded-full bg-black/40 backdrop-blur-md text-[10px] font-black uppercase tracking-[0.2em] font-sans">
-                        🔥 À LA UNE
+                <div class="flex items-center gap-3 mb-4">
+                    <div class="p-[1px] rounded-full bg-gradient-to-r from-orange-500 to-emerald-500 shadow-lg">
+                        <span class="block px-4 py-1 rounded-full bg-black/40 backdrop-blur-md text-[10px] font-black uppercase tracking-[0.2em]">
+                            🔥 À LA UNE
+                        </span>
+                    </div>
+                    <span class="text-[10px] font-bold uppercase tracking-widest opacity-80">
+                        ⏱ {{ $fReadingTime }} min de lecture
                     </span>
                 </div>
                 <h1 class="text-2xl md:text-5xl font-black mb-6 leading-tight italic tracking-tighter">{{ $featuredPost->title }}</h1>
@@ -32,16 +40,16 @@
     {{-- GRILLE PRINCIPALE --}}
     <div class="grid lg:grid-cols-3 gap-10">
         
-        {{-- COLONNE DES ARTICLES (2/3 de l'espace) --}}
         <div class="lg:col-span-2 space-y-10">
             <div class="grid md:grid-cols-2 gap-8">
                 @foreach($posts as $post)
                     @php 
+                        // Calcul précis du nombre de mots et du temps de lecture (moyenne 200 mots/min)
                         $wordCount = str_word_count(strip_tags($post->content));
                         $readingTime = ceil($wordCount / 200); 
                     @endphp
                     <article class="group flex flex-col h-full bg-white dark:bg-slate-900 rounded-[2rem] overflow-hidden shadow-sm border border-slate-100 dark:border-slate-800 transition-all duration-500 hover:shadow-2xl hover:-translate-y-1">
-                        {{-- Image de la carte --}}
+                        
                         <div class="overflow-hidden h-52 md:h-60 relative"> 
                             <img src="{{ $post->image ? asset('storage/'.$post->image) : asset('images/default.jpg') }}" 
                                  class="w-full h-full object-cover transition duration-700 group-hover:scale-110">
@@ -57,12 +65,19 @@
                                 {{ $post->title }}
                             </h2>
                             
-                            <div class="flex items-center gap-3 mb-4 text-[10px] font-bold uppercase tracking-wider text-slate-400">
-                                <img src="{{ $post->user && $post->user->photo ? asset('storage/'.$post->user->photo) : 'https://ui-avatars.com/api/?name='.urlencode($post->user->name ?? 'A') }}" 
-                                     class="w-7 h-7 rounded-full object-cover border border-emerald-100">
-                                <span>{{ $post->user->name ?? 'Admin' }}</span>
+                            {{-- META DATA : Date + Mots + Temps --}}
+                            <div class="flex flex-wrap items-center gap-y-2 gap-x-3 mb-4 text-[9px] font-bold uppercase tracking-wider text-slate-400">
+                                <div class="flex items-center gap-2">
+                                    <img src="{{ $post->user && $post->user->photo ? asset('storage/'.$post->user->photo) : 'https://ui-avatars.com/api/?name='.urlencode($post->user->name ?? 'A') }}" 
+                                         class="w-6 h-6 rounded-full object-cover border border-emerald-100">
+                                    <span>{{ $post->user->name ?? 'Admin' }}</span>
+                                </div>
                                 <span class="text-slate-200 dark:text-slate-700">•</span>
                                 <span>{{ $post->created_at->translatedFormat('d M Y') }}</span>
+                                <span class="text-slate-200 dark:text-slate-700">•</span>
+                                <span class="text-emerald-500">📖 {{ $wordCount }} mots</span>
+                                <span class="text-slate-200 dark:text-slate-700">•</span>
+                                <span>⏱ {{ $readingTime }} min</span>
                             </div>
 
                             <p class="text-sm text-slate-500 dark:text-slate-400 mb-6 line-clamp-3 flex-1 font-sans leading-relaxed">
@@ -70,7 +85,7 @@
                             </p>
                             
                             <div class="flex justify-between items-center pt-5 border-t border-slate-50 dark:border-slate-800">
-                                <a href="{{ route('post.show', $post->slug) }}" class="text-[11px] font-black uppercase tracking-widest text-emerald-600 hover:emerald-400 transition flex items-center gap-2">
+                                <a href="{{ route('post.show', $post->slug) }}" class="text-[11px] font-black uppercase tracking-widest text-emerald-600 hover:text-emerald-400 transition flex items-center gap-2">
                                     Continuer <span class="group-hover:translate-x-1 transition-transform">→</span>
                                 </a>
                                 <div class="flex items-center gap-4 text-[10px] font-bold text-slate-400">
@@ -85,13 +100,11 @@
                 @endforeach
             </div>
 
-            {{-- PAGINATION --}}
             <div class="mt-12">
                 {{ $posts->links() }}
             </div>
         </div>
 
-        {{-- SIDEBAR (1/3 de l'espace) --}}
         <aside class="space-y-8">
             <div class="sticky top-10">
                 @include('profile.partials.sidebar')
@@ -116,14 +129,6 @@ function likePost(postId) {
             document.getElementById('like-count-' + postId).innerText = data.likes; 
         }
     })
-    .catch(err => console.error('Erreur Like:', err));
 }
 </script>
-
-<style>
-    /* Pagination personnalisée pour correspondre au design */
-    .pagination { @apply flex justify-center gap-2; }
-    .page-item.active .page-link { @apply bg-emerald-600 border-emerald-600 text-white rounded-xl; }
-    .page-link { @apply rounded-xl border-none bg-white dark:bg-slate-900 dark:text-white shadow-sm font-bold; }
-</style>
 @endsection
