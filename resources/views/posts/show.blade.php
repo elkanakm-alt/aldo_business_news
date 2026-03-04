@@ -5,132 +5,186 @@
     \Carbon\Carbon::setLocale('fr');
     $wordCount = str_word_count(strip_tags($post->content));
     $readingTime = ceil($wordCount / 200); 
-    $commentsList = isset($comments) ? $comments : $post->comments()->whereNull('parent_id')->where('status', 'approved')->latest()->get();
+    
+    // Pagination des commentaires (4 par page)
+    $commentsList = $post->comments()
+        ->whereNull('parent_id')
+        ->where('status', 'approved')
+        ->latest()
+        ->paginate(4, ['*'], 'comments_page');
+
+    // On suppose que les articles liés sont aussi paginés si nécessaire
+    $relatedPostsPaginated = $relatedPosts instanceof \Illuminate\Pagination\LengthAwarePaginator 
+        ? $relatedPosts 
+        : $relatedPosts->take(4); 
 @endphp
 
-<div class="max-w-[1550px] mx-auto px-0 sm:px-6 lg:px-10 py-6 md:py-12 bg-white dark:bg-slate-950 min-h-screen">
+<div class="max-w-[1550px] mx-auto bg-white dark:bg-slate-950 min-h-screen px-4 md:px-10">
     
-    {{-- 1. PHOTO PRINCIPALE : Cadre arrondi moderne sans coupure --}}
-    <div class="w-full mb-8 md:mb-14 md:pt-4 px-4 sm:px-0">
-        <div class="w-full bg-slate-100 dark:bg-slate-900 rounded-[2.5rem] md:rounded-[4rem] overflow-hidden shadow-2xl border border-slate-100 dark:border-slate-800">
-            <img src="{{ $post->image ? asset('storage/'.$post->image) : asset('images/default.jpg') }}" 
-                 class="w-full h-auto max-h-[75vh] object-contain mx-auto shadow-inner" 
-                 alt="{{ $post->title }}">
-        </div>
-    </div>
-
-    <div class="px-5 sm:px-0">
-        <div class="flex flex-col lg:flex-row gap-8 md:gap-16">
+    <div class="flex flex-col lg:flex-row gap-8 pt-6">
+        
+        {{-- COLONNE GAUCHE --}}
+        <div class="flex-1 w-full">
             
-            <article class="flex-1 w-full">
-                
-                {{-- Titre --}}
-                <h1 class="text-3xl md:text-7xl font-black leading-[1.1] mb-8 text-slate-900 dark:text-white italic tracking-tighter">
+            {{-- 1. PHOTO EN VEDETTE --}}
+            <div class="w-full mb-6">
+                <div class="w-full h-[300px] md:h-[450px] rounded-[3rem] md:rounded-[4rem] overflow-hidden shadow-2xl bg-slate-900 border border-slate-100 dark:border-slate-800 flex items-center justify-center">
+                    <img src="{{ $post->image ? asset('storage/'.$post->image) : asset('images/default.jpg') }}" 
+                         class="w-full h-full object-cover" 
+                         alt="{{ $post->title }}">
+                </div>
+            </div>
+
+            {{-- 2. TITRE SOUS PHOTO --}}
+            <div class="mb-6 px-4">
+                <h1 class="text-2xl md:text-3xl font-black text-slate-900 dark:text-white italic tracking-tighter leading-tight uppercase">
                     {{ $post->title }}
                 </h1>
+            </div>
 
-                {{-- Barre d'infos & Compteurs --}}
-                <div class="flex flex-wrap items-center justify-between py-8 border-y border-slate-100 dark:border-slate-800 mb-12 gap-6">
-                    <div class="flex items-center gap-4">
+            {{-- 3. STATISTIQUES --}}
+            <div class="mb-8 px-4">
+                <div class="flex items-center gap-3 overflow-x-auto pb-2 no-scrollbar">
+                    <div class="flex items-center shrink-0 gap-3 bg-slate-50 dark:bg-slate-900 px-4 py-2 rounded-2xl border border-slate-100 dark:border-slate-800 shadow-sm">
                         <img src="{{ $post->user && $post->user->photo ? asset('storage/'.$post->user->photo) : 'https://ui-avatars.com/api/?background=10b981&color=fff&name='.urlencode($post->user->name ?? 'A') }}" 
-                             class="w-14 h-14 rounded-full border-2 border-emerald-500 object-cover shadow-sm">
-                        <div>
-                            <p class="font-black text-slate-900 dark:text-white text-[14px] uppercase tracking-tighter leading-none mb-1">{{ $post->user->name ?? 'Auteur' }}</p>
-                            <p class="text-[10px] text-slate-400 uppercase font-bold tracking-widest">{{ $post->created_at->translatedFormat('d F Y') }}</p>
-                        </div>
+                             class="w-6 h-6 rounded-full border border-emerald-500 object-cover">
+                        <span class="font-black text-slate-900 dark:text-white text-[9px] uppercase tracking-tighter">{{ $post->user->name ?? 'Admin' }}</span>
                     </div>
-                    
-                    <div class="flex items-center gap-6 text-[11px] font-black uppercase tracking-widest text-slate-500 dark:text-slate-400">
-                        <span class="flex items-center gap-2">⏱ {{ $readingTime }} MIN</span>
-                        <span class="flex items-center gap-2">👁 {{ $post->views ?? 0 }} VUES</span>
-                        <button onclick="likePost({{ $post->id }})" class="flex items-center gap-2 bg-emerald-50 dark:bg-emerald-900/20 text-emerald-600 px-5 py-2.5 rounded-xl active:scale-125 transition">
+
+                    <div class="flex items-center shrink-0 gap-4 text-[9px] font-black uppercase tracking-widest text-slate-500 bg-slate-50 dark:bg-slate-900 px-5 py-3 rounded-2xl border border-slate-100 dark:border-slate-800 shadow-sm">
+                        <span class="text-slate-400 font-bold tracking-normal">{{ $post->created_at->translatedFormat('d M Y') }}</span>
+                        <span class="text-emerald-500 font-black italic">📖 {{ $wordCount }} MOTS</span>
+                        <button onclick="likePost({{ $post->id }})" class="text-rose-500 flex items-center gap-1 active:scale-125 transition">
                             ❤️ <span id="like-count-{{ $post->id }}">{{ $post->likes ?? 0 }}</span>
                         </button>
                     </div>
                 </div>
+            </div>
 
-                {{-- CONTENU TEXTUEL : Pleine largeur --}}
-                <div class="article-content prose dark:prose-invert max-w-none w-full text-lg md:text-[24px] leading-[1.85] text-slate-700 dark:text-slate-300 font-sans">
+            {{-- 4. LE CADRE "BARRE" (CONTENU) --}}
+            <div class="relative px-6 md:px-16 py-12 md:py-20 bg-white dark:bg-slate-900/40 shadow-[0_30px_70px_-15px_rgba(0,0,0,0.15)] dark:shadow-[0_30px_70px_-15px_rgba(0,0,0,0.5)] rounded-[3rem] md:rounded-[4rem] border border-slate-100/50 dark:border-slate-800/50">
+                <div class="hidden md:block absolute top-0 left-0 w-24 h-24 border-t-[6px] border-l-[6px] border-emerald-500 rounded-tl-[4rem]"></div>
+                <div class="article-content prose dark:prose-invert max-w-none text-base leading-[1.8] text-slate-700 dark:text-slate-300 font-sans">
                     {!! $post->content !!}
                 </div>
+            </div>
 
-                {{-- SECTION DISCUSSION --}}
-                <section class="mt-20 pt-10 border-t border-slate-100 dark:border-slate-800 pb-20">
-                    <div class="flex items-center justify-between mb-10">
-                        <h3 class="text-3xl font-black uppercase italic dark:text-white tracking-tighter">Discussion</h3>
-                        <span class="bg-emerald-500 text-white text-[10px] font-black px-4 py-1.5 rounded-full uppercase">{{ $commentsList->count() }} avis</span>
-                    </div>
+            {{-- 5. DISCUSSION AVEC PAGINATION --}}
+            <section class="mt-20 px-4" id="comments-section">
+                <h3 class="text-2xl font-black uppercase italic dark:text-white tracking-tighter flex items-center gap-3 mb-10">
+                    <span class="w-10 h-[4px] bg-emerald-500"></span> Discussion
+                </h3>
 
-                    @auth
-                        <form action="{{ route('comments.store', $post->id) }}" method="POST" class="mb-12">
-                            @csrf
-                            <div class="bg-slate-50 dark:bg-slate-900/50 p-6 rounded-[2.5rem] flex flex-col gap-4 border border-slate-100 dark:border-slate-800">
-                                <textarea name="content" rows="3" class="w-full bg-transparent border-none focus:ring-0 text-lg dark:text-white placeholder:text-slate-400" placeholder="Votre avis sur cet article..."></textarea>
-                                <button type="submit" class="self-end px-8 py-4 bg-slate-900 dark:bg-emerald-600 text-white text-[11px] font-black uppercase rounded-xl shadow-xl hover:scale-105 transition">Envoyer</button>
-                            </div>
-                        </form>
-                    @else
-                        {{-- MESSAGE POUR LES NON-CONNECTÉS --}}
-                        <div class="mb-12 p-8 rounded-[2.5rem] bg-emerald-50 dark:bg-emerald-900/10 border border-emerald-100 dark:border-emerald-800/30 text-center">
-                            <p class="text-slate-600 dark:text-slate-400 font-bold mb-4">Vous voulez participer à la discussion ?</p>
-                            <div class="flex flex-wrap justify-center gap-4">
-                                <a href="{{ route('login') }}" class="px-6 py-2.5 bg-emerald-600 text-white text-[10px] font-black uppercase rounded-full shadow-lg hover:bg-emerald-700 transition">Se connecter</a>
-                                <a href="{{ route('register') }}" class="px-6 py-2.5 bg-white dark:bg-slate-800 text-emerald-600 dark:text-emerald-400 border border-emerald-200 dark:border-emerald-800 text-[10px] font-black uppercase rounded-full hover:bg-emerald-50 transition">Créer un compte</a>
+                @auth
+                    <form action="{{ route('comments.store', $post->id) }}" method="POST" class="mb-14">
+                        @csrf
+                        <div class="bg-slate-50 dark:bg-slate-900/50 p-6 rounded-[2.5rem] border border-slate-100 dark:border-slate-800 shadow-inner">
+                            <textarea name="content" rows="2" class="w-full bg-transparent border-none focus:ring-0 text-sm dark:text-white" placeholder="Ajouter un avis..."></textarea>
+                            <div class="flex justify-end mt-2">
+                                <button type="submit" class="px-8 py-2.5 bg-emerald-600 text-white text-[10px] font-black uppercase rounded-xl">Publier →</button>
                             </div>
                         </div>
-                    @endauth
+                    </form>
+                @else
+                    <div class="mb-14 p-10 rounded-[3rem] bg-slate-50/50 dark:bg-slate-900/30 border-2 border-dashed border-slate-200 dark:border-slate-800 text-center">
+                        <p class="text-[10px] font-black uppercase tracking-widest text-slate-400 mb-6 italic">Connectez-vous pour discuter</p>
+                        <a href="{{ route('login') }}" class="px-8 py-3 bg-emerald-600 text-white text-[10px] font-black uppercase rounded-full shadow-lg inline-block">Connexion</a>
+                    </div>
+                @endauth
 
-                    {{-- Liste des commentaires --}}
-                    <div class="space-y-8">
-                        @forelse($commentsList as $comment)
-                            <div class="flex gap-5">
-                                <img src="{{ $comment->user->photo ? asset('storage/'.$comment->user->photo) : 'https://ui-avatars.com/api/?name='.urlencode($comment->user->name) }}" class="w-12 h-12 rounded-full border border-slate-200 object-cover shrink-0">
-                                <div class="flex-1 bg-slate-50 dark:bg-slate-900/30 p-6 rounded-[2.5rem] border border-slate-50 dark:border-slate-800/50">
-                                    <div class="flex justify-between items-center mb-2">
-                                        <h4 class="text-[12px] font-black uppercase dark:text-white">{{ $comment->user->name }}</h4>
-                                        <span class="text-[9px] text-slate-400 font-bold tracking-tighter">{{ $comment->created_at->diffForHumans() }}</span>
+                <div class="space-y-4">
+                    @forelse($commentsList as $comment)
+                        <div class="flex flex-col gap-1">
+                            <div class="flex gap-3 items-start">
+                                <img src="{{ $comment->user->photo ? asset('storage/'.$comment->user->photo) : 'https://ui-avatars.com/api/?background=f1f5f9&color=10b981&name='.urlencode($comment->user->name) }}" class="w-9 h-9 rounded-full object-cover shrink-0 border border-white dark:border-slate-800 shadow-sm">
+                                <div class="flex-1 bg-slate-50 dark:bg-slate-900/40 p-5 rounded-[1.8rem] rounded-tl-none border border-slate-50 dark:border-slate-800/50">
+                                    <div class="flex justify-between items-center mb-1 text-[9px] font-black uppercase tracking-tighter">
+                                        <span class="dark:text-white font-bold">{{ $comment->user->name }}</span>
+                                        <span class="text-slate-400 italic lowercase">{{ $comment->created_at->diffForHumans() }}</span>
                                     </div>
-                                    <p class="text-lg text-slate-600 dark:text-slate-400 italic leading-relaxed">"{{ $comment->content }}"</p>
+                                    <p class="text-sm text-slate-600 dark:text-slate-400 font-sans italic">"{{ $comment->content }}"</p>
                                 </div>
                             </div>
-                        @empty
-                            <p class="text-center text-slate-400 text-sm italic py-10">Soyez le premier à donner votre avis.</p>
-                        @endforelse
-                    </div>
-                </section>
-            </article>
-
-            {{-- Sidebar --}}
-            <aside class="w-full lg:w-[320px] shrink-0">
-                <div class="lg:sticky lg:top-24">
-                    @include('profile.partials.sidebar')
+                            @if($comment->replies)
+                                @foreach($comment->replies as $reply)
+                                    <div class="flex gap-3 items-start ml-12">
+                                        <img src="{{ $reply->user->photo ? asset('storage/'.$reply->user->photo) : 'https://ui-avatars.com/api/?background=10b981&color=fff&name=S' }}" class="w-7 h-7 rounded-full object-cover">
+                                        <div class="flex-1 bg-emerald-50/40 dark:bg-emerald-900/10 p-4 rounded-[1.5rem] rounded-tl-none border-l-4 border-emerald-500">
+                                            <h5 class="text-[9px] font-black uppercase text-emerald-600 tracking-tight">{{ $reply->user->name }} <span class="ml-1 px-1 py-0.5 bg-emerald-500 text-white text-[6px] rounded">Staff</span></h5>
+                                            <p class="text-sm text-slate-700 dark:text-slate-300 font-sans leading-tight">{{ $reply->content }}</p>
+                                        </div>
+                                    </div>
+                                @endforeach
+                            @endif
+                        </div>
+                    @empty
+                        <p class="text-center text-slate-400 text-[9px] uppercase font-black italic">Aucun avis.</p>
+                    @endforelse
                 </div>
-            </aside>
+
+                {{-- PAGINATION COMMENTAIRES --}}
+                <div class="mt-10 mb-20 custom-pagination">
+                    {{ $commentsList->appends(['comments_page' => $commentsList->currentPage()])->links() }}
+                </div>
+            </section>
+
+            {{-- 6. ARTICLES LIÉS --}}
+            @if($relatedPosts->count() > 0)
+            <div class="mt-10 mb-24 border-t border-slate-100 dark:border-slate-800 pt-16 px-4">
+                <h3 class="text-xl font-black uppercase italic mb-8 dark:text-white tracking-tighter flex items-center gap-3">
+                    <span class="w-10 h-[4px] bg-slate-200 dark:bg-slate-700"></span> À découvrir aussi
+                </h3>
+                <div class="grid grid-cols-1 md:grid-cols-2 gap-6">
+                    @foreach($relatedPostsPaginated as $related)
+                    <a href="{{ route('posts.show', $related->slug) }}" class="group flex items-center gap-4 bg-slate-50 dark:bg-slate-900/30 p-4 rounded-[2rem] border border-transparent hover:border-emerald-500/30 transition-all">
+                        <img src="{{ $related->image ? asset('storage/'.$related->image) : asset('images/default.jpg') }}" class="w-16 h-16 rounded-2xl object-cover shadow-sm">
+                        <h4 class="text-[11px] font-black uppercase italic leading-tight dark:text-white group-hover:text-emerald-500 transition line-clamp-2">{{ $related->title }}</h4>
+                    </a>
+                    @endforeach
+                </div>
+                
+                {{-- SI ARTICLES LIÉS SONT NOMBREUX, AJOUTER PAGINATION ICI --}}
+                @if($relatedPosts instanceof \Illuminate\Pagination\LengthAwarePaginator)
+                    <div class="mt-8 custom-pagination">
+                        {{ $relatedPosts->links() }}
+                    </div>
+                @endif
+            </div>
+            @endif
+
         </div>
+
+        {{-- SIDEBAR --}}
+        <aside class="w-full lg:w-[350px] shrink-0">
+            <div class="lg:sticky lg:top-6 space-y-6">
+                @include('profile.partials.sidebar')
+            </div>
+        </aside>
+
     </div>
 </div>
+
+<style>
+    /* Style minimaliste pour la pagination */
+    .custom-pagination nav { display: flex; justify-content: center; gap: 10px; }
+    .custom-pagination svg { width: 20px; }
+    .custom-pagination span, .custom-pagination a { 
+        padding: 8px 16px; border-radius: 12px; background: #f8fafc; color: #64748b; font-size: 10px; font-weight: 900; text-transform: uppercase;
+    }
+    .dark .custom-pagination span, .dark .custom-pagination a { background: #0f172a; color: #94a3b8; }
+    .custom-pagination .active { background: #10b981 !important; color: white !important; }
+    
+    .no-scrollbar::-webkit-scrollbar { display: none; }
+    .no-scrollbar { -ms-overflow-style: none; scrollbar-width: none; }
+    .article-content img { width: 100%; height: auto; border-radius: 2rem; margin: 2rem 0; }
+</style>
 
 <script>
 function likePost(postId) {
     fetch('/post/' + postId + '/like', {
         method: 'POST',
         headers: { 'X-CSRF-TOKEN': '{{ csrf_token() }}', 'Accept': 'application/json', 'X-Requested-With': 'XMLHttpRequest' }
-    })
-    .then(res => res.json())
-    .then(data => { if(data.likes !== undefined) document.getElementById('like-count-' + postId).innerText = data.likes; })
+    }).then(res => res.json()).then(data => { if(data.likes !== undefined) document.getElementById('like-count-' + postId).innerText = data.likes; })
 }
 </script>
-
-<style>
-    .article-content { width: 100% !important; }
-    .article-content p { margin-bottom: 2rem; width: 100%; }
-    .article-content img {
-        width: 100%;
-        height: auto;
-        object-fit: contain;
-        border-radius: 2rem;
-        margin: 3.5rem 0;
-        box-shadow: 0 10px 40px rgba(0,0,0,0.05);
-    }
-</style>
 @endsection
